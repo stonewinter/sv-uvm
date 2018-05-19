@@ -1,5 +1,11 @@
-// Code your testbench here
-// or browse Examples
+/************************************
+signle sequencer shared by
+multiple sequencer
+running in parallel 
+************************************/
+
+
+import uvm_pkg::*;
 `include "uvm_macros.svh"
 
 
@@ -65,12 +71,12 @@ class SequenceA extends uvm_sequence#(Packet);
    task body();
       req = Packet::type_id::create("req packet");
       for(int i=0; i<5; i++) begin
-         start_item(req);
-         // packet filling up
-	 req.a = i;
-	 req.b = i+1;
-	 req.msg = $sformatf("here is the No.%0d msg in SequenceA", i);
-         finish_item(req);
+        start_item(req);
+        // packet filling up
+        req.a = i;
+        req.b = i+1;
+        req.msg = $sformatf("here is the No.%0d msg in SequenceA", i);
+        finish_item(req);
       end
       `uvm_info("SequenceaA", $sformatf("SequenceA has done"), UVM_LOW);
    endtask
@@ -128,7 +134,7 @@ class Driver extends uvm_driver#(Packet);
 
    task main_phase(uvm_phase phase);
       forever begin
-	 seq_item_port.get(req);
+	 seq_item_port.get_next_item(req);
 	 // drive this packet
 	 $display("time = %0t, %s", $time, req.info());
 	 seq_item_port.item_done();
@@ -154,7 +160,7 @@ class Test extends uvm_test;
    SequenceA seqa;
    SequenceB seqb;
    Driver drv;
-   uvm_sequencer sqcr;
+   uvm_sequencer#(Packet) sqcr;
    
    function new(string name="Test", uvm_component parent);
       super.new(name, parent);
@@ -164,6 +170,8 @@ class Test extends uvm_test;
       super.build_phase(phase);
       drv = Driver::type_id::create("drv", this);
       sqcr = new("sqcr", this);
+      seqa = SequenceA::type_id::create("seqa", this);
+      seqb = SequenceB::type_id::create("seqb", this);
    endfunction
 
    function void connect_phase(uvm_phase phase);
@@ -172,8 +180,6 @@ class Test extends uvm_test;
    endfunction // connect_phase
 
    task main_phase(uvm_phase phase);
-      seqa = SequenceA::type_id::create("seqa", this);
-      seqb = SequenceB::type_id::create("seqb", this);
      phase.raise_objection(this);
       fork
 	 seqa.start(sqcr);
@@ -183,3 +189,13 @@ class Test extends uvm_test;
    endtask
 
 endclass // Test
+
+
+
+module top();
+    initial begin
+      run_test("Test");
+    end
+
+endmodule 
+
